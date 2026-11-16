@@ -1,0 +1,13 @@
+# Personal job-hunt data (resume, profile, leads, CVs) never belongs in the repo
+job-hunt/
+/*.pdf
+/resume*.*
+/cv*.docx
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+node_modules/
+*.log

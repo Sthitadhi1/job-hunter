@@ -1,0 +1,17 @@
+{
+  "name": "job-hunter-marketplace",
+  "owner": {
+    "name": "Sthitadhi Maity"
+  },
+  "metadata": {
+    "description": "job-hunter: an automated, resume-driven job hunt for Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "job-hunter",
+      "source": "./",
+      "description": "Upload your resume: jobs ranked by interview chance, a LinkedIn contact for every job, resume gaps and fixes, tailored CVs and outreach.",
+      "version": "3.1.0"
+    }
+  ]
+}
