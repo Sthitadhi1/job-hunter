@@ -12,7 +12,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
@@ -252,7 +252,8 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{cur=b.dataset.
 document.querySelector('nav button').classList.add('on');document.getElementById('q').oninput=draw;draw();</script></body></html>`;
   const out = path.join(DIR, 'dashboard.html');
   fs.writeFileSync(out, html);
-  if (args.open) exec(process.platform === 'win32' ? `start "" "${out}"` : process.platform === 'darwin' ? `open "${out}"` : `xdg-open "${out}"`);
+  // Open in the default browser without a shell (the path is passed as an argument, never interpolated).
+  if (args.open) execFile(process.platform === 'win32' ? 'explorer.exe' : process.platform === 'darwin' ? 'open' : 'xdg-open', [path.resolve(out)], () => {});
   console.log(JSON.stringify({ dashboard: path.resolve(out), jobs: jobs.length, tracked: tracker.length, leads: leads.length, follow_ups_due: due.length }, null, 2));
 }
 

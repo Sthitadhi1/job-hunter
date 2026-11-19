@@ -34,16 +34,40 @@ resume ─► profile ─► ~15k jobs scanned ─► resume gaps ─► fit + i
 
 ## Install
 
-You need [Claude Code](https://claude.com/claude-code) and Node.js 18+. Nothing else: no
-`npm install`, no Playwright, no config files. In Claude Code:
+You need [Claude Code](https://claude.com/claude-code) (CLI or desktop app) and Node.js 18+.
+Nothing else: no `npm install`, no Playwright, no config files.
+
+**Install it yourself. Don't ask Claude to install it for you.** Claude deliberately won't
+download and install code from a link someone sent you, and that's the right behaviour. These
+two commands take ten seconds.
+
+In a terminal:
+
+```bash
+claude plugin marketplace add Sthitadhi1/job-hunter
+claude plugin install job-hunter@job-hunter-marketplace
+```
+
+or inside a Claude Code session:
 
 ```
 /plugin marketplace add Sthitadhi1/job-hunter
 /plugin install job-hunter@job-hunter-marketplace
 ```
 
-Restart Claude Code, then run `/job-hunter:hunt` with your resume (PDF, DOCX, TXT or Markdown).
-If you don't give a path, it looks for one in the current folder, Downloads and Desktop.
+To pin a reviewed version instead of the latest `main`, use `Sthitadhi1/job-hunter#v3.1.0`.
+
+Restart Claude Code, then run `/job-hunter:hunt` with your resume (PDF, DOCX, TXT or Markdown),
+or just say "review my resume for AIML jobs". If you don't give a path, it looks for a resume in
+the current folder, Downloads and Desktop.
+
+Before installing, read [SECURITY.md](SECURITY.md): it lists every site the scripts contact
+and everything the plugin will and won't do. Or ask Claude to review the repo first. Reading it
+is fine; it's installing on someone else's say-so that it refuses.
+
+Update later with `claude plugin marketplace update job-hunter-marketplace` and
+`claude plugin update job-hunter@job-hunter-marketplace`. Remove it with
+`claude plugin uninstall job-hunter@job-hunter-marketplace`.
 
 For LinkedIn lead finding and form filling, connect **Claude in Chrome** (it uses the Chrome
 you're already signed in to). Without it, the plugin uses Claude's built-in browser (sign in
