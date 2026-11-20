@@ -2,7 +2,7 @@
 
 job-hunter is a set of Markdown skill files plus a few plain Node.js scripts. There is no build
 step, no dependency tree, no install script, and no binary. Everything below can be checked by
-reading the files in `skills/*/scripts/` (about 2,100 lines in total).
+reading the files in `skills/*/scripts/` (about 2,300 lines in total).
 
 ## What runs on your machine
 
