@@ -49,10 +49,15 @@ const OUT_DIR = args['out-dir'] || path.dirname(path.resolve(args.profile));
 const MIN_SCORE = Number(args['min-score'] ?? 35);
 const MAX_RESULTS = Number(args.max ?? 200);
 const MAX_AGE_DAYS = Number(args.days ?? 45);
-const ALL_SOURCES = ['linkedin', 'ats', 'himalayas', 'jobicy', 'wwr', 'workingnomads', 'nodesk', 'remotive', 'remoteok', 'arbeitnow', 'hn', 'ycjobs', 'jsearch', 'adzuna'];
+const ALL_SOURCES = ['linkedin', 'ats', 'telegram', 'fresher-sites', 'himalayas', 'jobicy', 'wwr', 'workingnomads', 'nodesk', 'remotive', 'remoteok', 'arbeitnow', 'hn', 'ycjobs', 'jsearch', 'adzuna'];
 // Country names / ISO3 codes for search APIs that filter by country (Amazon, Eightfold).
 const COUNTRIES = { in: ['India', 'IND'], us: ['United States', 'USA'], gb: ['United Kingdom', 'GBR'], ca: ['Canada', 'CAN'], de: ['Germany', 'DEU'], ie: ['Ireland', 'IRL'], nl: ['Netherlands', 'NLD'], sg: ['Singapore', 'SGP'], au: ['Australia', 'AUS'], ae: ['United Arab Emirates', 'ARE'], fr: ['France', 'FRA'], es: ['Spain', 'ESP'], pl: ['Poland', 'POL'], jp: ['Japan', 'JPN'], br: ['Brazil', 'BRA'], mx: ['Mexico', 'MEX'] };
 const LINKEDIN_PAGES = Number(args['linkedin-pages'] ?? 3);
+// --cities india expands to the main Indian tech/startup hubs.
+const CITY_PRESETS = {
+  india: ['Bengaluru', 'Hyderabad', 'Pune', 'Chennai', 'Mumbai', 'Delhi', 'Gurugram', 'Noida', 'Kochi', 'Ahmedabad', 'Jaipur', 'Kolkata', 'Coimbatore', 'Thiruvananthapuram'],
+  'india-metros': ['Bengaluru', 'Hyderabad', 'Pune', 'Chennai', 'Mumbai', 'Delhi', 'Gurugram', 'Noida'],
+};
 // --fixtures raw-jobs.json runs the pipeline offline on saved jobs (used by the test suite).
 const SOURCES = new Set(
   (args.fixtures ? [] : args.sources ? String(args.sources).split(',') : ALL_SOURCES)
@@ -158,6 +163,68 @@ if (!queries.length) {
   process.exit(2);
 }
 
+// ---------- free-text job posts (Telegram, fresher sites, Instagram captions) ----------
+// One post may list several openings; each apply link starts a new one.
+function parseJobPost(text, links) {
+  const field = (block, names) => {
+    const m = block.match(new RegExp(`(?:^|\\n)\\s*[^\\w\\n]{0,3}\\s*(?:${names})\\s*(?:name)?\\s*[:\\-–]+\\s*(.+)`, 'i'));
+    return m ? m[1].replace(/[*_]+/g, '').trim().slice(0, 120) : '';
+  };
+  const clean = s => String(s || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '').replace(/[*_#|]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const fromBlock = (block, url) => {
+    const lines = block.split('\n').map(clean).filter(Boolean);
+    const hiring = block.match(/^\s*(.{2,60}?)\s+(?:is\s+)?(?:hiring|recruiting|off ?campus|recruitment|careers)\b(?:\s+(?:for|freshers?|:))?\s*(.{0,80})/im);
+    const company = clean(field(block, 'company|organi[sz]ation|employer') || (hiring && hiring[1]) || '');
+    const title = clean(field(block, 'role|position|designation|job ?title|job ?role|profile|post') || (hiring && hiring[2]) || lines[0] || '');
+    const location = clean(field(block, 'location|job location|work location|place'));
+    return { title: title.replace(/^(for|as)\s+/i, ''), company: company.replace(/^(?:\W+)/, ''), location, url };
+  };
+  if (!links.length) return [fromBlock(text, '')];
+  // Split the text into blocks that each end at an apply link mention.
+  const blocks = text.split(/\n(?=\s*(?:company|role|position|[A-Z][\w&.\- ]{1,40}\s+(?:is\s+)?hiring))/i);
+  const posts = [];
+  links.forEach((url, i) => {
+    const block = blocks.length === links.length ? blocks[i] : text;
+    const p = fromBlock(block, url);
+    if (p.title) posts.push(p);
+  });
+  return posts.length ? posts : [fromBlock(text, links[0])];
+}
+
+// Company name from an apply link (jobs.lever.co/acme, acme.keka.com, careers.acme.com ...).
+const AGGREGATOR_HOST = /(linkedin|naukri|indeed|glassdoor|tinyurl|bit\.ly|cutt\.ly|rb\.gy|shorturl|acciojob|cuvette|unstop|internshala|telegram|^t\.me$|offcampusjobs4u|freshersnow|fresherjobinfo|enggwave|freshersjunction|blogspot|wordpress|medium\.com|^google\.com$|forms\.gle|docs\.google)/i;
+const hostOf = u => { try { return new URL(u).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; } };
+function companyFromUrl(u) {
+  let url;
+  try { url = new URL(u); } catch { return ''; }
+  const h = url.hostname.toLowerCase().replace(/^www\./, '');
+  const seg = url.pathname.split('/').filter(Boolean);
+  const pick = s => s ? s.replace(/[-_]+/g, ' ').replace(/\b(careers?|jobs?|inc|ltd|llc|external|global)\b/gi, '').trim().replace(/\b\w/g, c => c.toUpperCase()) : '';
+  if (/(^|\.)lever\.co$|greenhouse\.io$|ashbyhq\.com$|smartrecruiters\.com$|workable\.com$|jobs\.gem\.com$/.test(h)) return pick(seg[0] === 'embed' ? url.searchParams.get('for') : seg[0]);
+  if (h === 'ats.rippling.com') return pick(seg.find(s => !/^[a-z]{2}(-[A-Z]{2})?$/.test(s)));
+  const sub = h.match(/^([a-z0-9-]+)\.(keka\.com|darwinbox\.in|zohorecruit\.\w+|freshteam\.com|recruitee\.com|teamtailor\.com|bamboohr\.com|breezy\.hr|wd\d+\.myworkdayjobs\.com|jobs\.personio\.\w+|icims\.com)$/);
+  if (sub) return pick(sub[1].replace(/^careers-/, ''));
+  if (AGGREGATOR_HOST.test(h) || /oraclecloud\.com$|myworkdayjobs\.com$/.test(h)) return '';
+  const parts = h.split('.');
+  return pick(parts.length > 2 && /^(careers?|jobs?|apply|hiring|join)$/.test(parts[0]) ? parts[1] : parts[parts.length - 2]);
+}
+const SCAM = /(registration fee|security deposit|processing fee|training fee|pay (?:rs\.?|₹|inr)\s?\d|refundable (?:fee|deposit)|joining fee)/i;
+
+// Graduation-year eligibility ("2025/2026 batch", "graduating in 2028", "2024-2026 passouts").
+const gradYear = Number(profile.graduation_year) ||
+  Math.max(0, ...String(profile.graduation || '').match(/20\d\d/g)?.map(Number) || [0]) || null;
+function batchYears(text) {
+  const years = new Set();
+  const t = String(text || '');
+  const add = s => {
+    for (const m of s.matchAll(/(20\d\d)\s*(?:-|–|to)\s*(20\d\d)/g)) for (let y = +m[1]; y <= +m[2] && y - m[1] < 8; y++) years.add(y);
+    for (const m of s.matchAll(/20\d\d/g)) years.add(+m[0]);
+  };
+  for (const m of t.matchAll(/(?:batch(?:es)?|pass ?outs?|pass-outs?|graduat\w*|yop|year of passing|class of|eligible batch)\W{0,4}[^.\n]{0,40}/gi)) add(m[0]);
+  for (const m of t.matchAll(/((?:20\d\d\s*(?:[,/&+]|and|or|-|–|to)?\s*){1,6})\s*(?:batch(?:es)?|pass ?outs?|pass-outs?|graduates)/gi)) add(m[1]);
+  return [...years].filter(y => y >= 2015 && y <= 2035).sort();
+}
+
 // ---------- normalized job shape ----------
 function job(o) {
   return {
@@ -181,19 +248,30 @@ const sources = {
     // LinkedIn's public (logged-out) job search, the same listings you see at linkedin.com/jobs
     // without signing in. Paced to stay well under its rate limits.
     const out = [];
-    // Up to 3 distinct places (Bangalore/Bengaluru etc. collapse) plus Remote if wanted.
-    const SAME = { bengaluru: 'bangalore', gurugram: 'gurgaon', mumbai: 'bombay', 'new delhi': 'delhi' };
+    // Cities: --cities "Pune,Noida" or a preset (--cities india), else the profile's locations.
+    // Bangalore/Bengaluru etc. collapse; Remote is added when the profile wants it.
+    const SAME = { bengaluru: 'bangalore', gurugram: 'gurgaon', mumbai: 'bombay', 'new delhi': 'delhi', cochin: 'kochi' };
     const placeKey = l => SAME[norm(l)] || norm(l);
-    const places = [...new Map(locations.filter(l => !/remote/i.test(l)).map(l => [placeKey(l), l])).values()].slice(0, 3);
+    const wanted = args.cities ? String(args.cities).split(',').flatMap(c => CITY_PRESETS[c.trim().toLowerCase()] || [c.trim()]) : locations;
+    const countryOnly = l => /^(india|united states|usa|uk|united kingdom|germany|canada)$/i.test(l.trim());
+    const cityList = wanted.filter(l => !/remote/i.test(l));
+    const places = [...new Map((cityList.some(l => !countryOnly(l)) ? cityList.filter(l => !countryOnly(l)) : cityList).map(l => [placeKey(l), l])).values()]
+      .slice(0, Number(args['max-cities'] ?? 14));
     const locs = [...places, ...(remoteOk && locations.some(l => /remote/i.test(l)) ? ['Remote'] : [])];
     if (!locs.length) locs.push('');
     const tpr = MAX_AGE_DAYS <= 1 ? 'r86400' : MAX_AGE_DAYS <= 7 ? 'r604800' : 'r2592000';
-    for (const q of queries.slice(0, 4)) for (const loc of locs) {
+    // LinkedIn experience-level filter from the profile (1 internship, 2 entry, 3 associate, 4 mid-senior, 5 director).
+    const EXP = { intern: '1', internship: '1', fresher: '1%2C2', junior: '1%2C2', entry: '1%2C2', graduate: '1%2C2', mid: '2%2C3', senior: '3%2C4', staff: '4%2C5', lead: '4%2C5' };
+    const fE = args['no-level-filter'] || !EXP[seniority] ? '' : `&f_E=${EXP[seniority]}`;
+    // Keep the request count sane when searching many cities.
+    const qs = queries.slice(0, locs.length > 5 ? 2 : locs.length > 3 ? 3 : 4);
+    const pages = locs.length > 5 ? Math.min(LINKEDIN_PAGES, 2) : LINKEDIN_PAGES;
+    for (const q of qs) for (const loc of locs) {
       const remote = /remote/i.test(loc);
       let start = 0;
-      for (let page = 0; page < LINKEDIN_PAGES; page++) {
+      for (let page = 0; page < pages; page++) {
         const url = `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${encodeURIComponent(q)}` +
-          `${remote ? '&f_WT=2' : loc ? `&location=${encodeURIComponent(loc)}` : ''}&f_TPR=${tpr}&start=${start}`;
+          `${remote ? '&f_WT=2' : loc ? `&location=${encodeURIComponent(loc)}` : ''}&f_TPR=${tpr}${fE}&sortBy=DD&start=${start}`;
         const r = await getText(url, { retries: 2 });
         if (r.status === 429) { console.error('  linkedin: rate limited, keeping what we have'); return out; }
         const cards = r.text.split(/<li>/).slice(1);
@@ -215,6 +293,72 @@ const sources = {
       }
       await sleep(1000);
     }
+    return out;
+  },
+
+  async telegram() {
+    // Public Telegram job channels (most Instagram job pages cross-post here). Read through
+    // Telegram's public web preview (t.me/s/<channel>), which needs no account.
+    const list = [
+      ...readJSON(path.join(HERE, '..', 'data', 'telegram.json'), []).map(c => c.channel),
+      ...(profile.telegram_channels || []),
+      ...String(args.telegram || '').split(',').map(s => s.trim()).filter(Boolean),
+    ].map(c => String(c).replace(/^@|^https?:\/\/t\.me\/(s\/)?/g, '')).filter(Boolean);
+    const out = [];
+    const SKIP_LINK = /t\.me|telegram\.|whatsapp|wa\.me|instagram\.com|youtube\.com|youtu\.be|linkedin\.com\/(in|posts|feed)|facebook\.com|twitter\.com|x\.com\/|chat\.whatsapp/i;
+    await pool([...new Set(list)], 3, async ch => {
+      let before = '';
+      let chTitle = '';
+      for (let page = 0; page < 2; page++) {
+        const r = await getText(`https://t.me/s/${encodeURIComponent(ch)}${before ? `?before=${before}` : ''}`);
+        chTitle = chTitle || decodeEntities((r.text.match(/property="og:title" content="([^"]*)/) || [])[1] || '').normalize('NFKC').trim();
+        const msgs = r.text.split('tgme_widget_message_wrap').slice(1);
+        if (!msgs.length) break;
+        const ids = [];
+        for (const m of msgs) {
+          const post = (m.match(/data-post="([^"]+)"/) || [])[1] || '';
+          ids.push(Number(post.split('/')[1]) || 0);
+          const when = (m.match(/datetime="([^"]+)"/) || [])[1];
+          const html = (m.match(/tgme_widget_message_text[^>]*>([\s\S]*?)<\/div>/) || [])[1];
+          if (!html) continue;
+          // Drop the channel's own header/pinned lines so they aren't mistaken for a job title.
+          const text = htmlToText(html.replace(/<br\s*\/?>/gi, '\n')).normalize('NFKC').split('\n')
+            .filter(l => !(chTitle && l.includes(chTitle)) && !/\bpinned\b/i.test(l)).join('\n');
+          if (/service_message|pinned/i.test(m.slice(0, 600)) && !/apply/i.test(text)) continue; // pinned notices, joins
+          if (!/(hiring|apply|role|position|batch|intern|engineer|developer|analyst|fresher|opening|off ?campus|vacancy)/i.test(text)) continue;
+          const links = [...html.matchAll(/href="([^"]+)"/g)].map(x => decodeEntities(x[1])).filter(u => /^https?:/.test(u) && !SKIP_LINK.test(u));
+          for (const p of parseJobPost(text, links)) out.push(job({
+            ...p, source: `telegram:${ch}`, posted_at: when, description: text,
+            ...(p.url ? {} : { url: `https://t.me/${post}` }),
+          }));
+        }
+        before = Math.min(...ids.filter(Boolean));
+        if (!isFinite(before)) break;
+        await sleep(800);
+      }
+    });
+    return out;
+  },
+
+  async 'fresher-sites'() {
+    // Fresher / off-campus job sites with RSS feeds (the same openings Instagram job pages post).
+    const feeds = [...readJSON(path.join(HERE, '..', 'data', 'feeds.json'), []), ...(profile.job_feeds || []).map(u => ({ url: u }))];
+    const out = [];
+    await pool(feeds, 3, async f => {
+      const r = await getText(f.url);
+      for (const item of r.text.split('<item>').slice(1)) {
+        const tag = t => decodeEntities(((item.match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`)) || [])[1] || '').replace(/^\s*<!\[CDATA\[|\]\]>\s*$/g, ''));
+        const title = tag('title');
+        if (!title || /(how to|tips|interview questions|syllabus|exam pattern|salary of|admit card|result)/i.test(title)) continue;
+        const body = htmlToText(tag('content:encoded') || tag('description')).normalize('NFKC');
+        const [p] = parseJobPost(`${title}\n${body}`, []);
+        out.push(job({
+          title: p?.title || title, company: p?.company || title.split(/\s+(?:off ?campus|recruitment|walk-?in|hiring|internship|careers|drive|jobs?)\b/i)[0],
+          location: p?.location || '', url: tag('link'), source: `fresher-sites:${f.name || new URL(f.url).hostname}`,
+          posted_at: tag('pubDate'), description: `${title}\n${body}`,
+        }));
+      }
+    });
     return out;
   },
 
@@ -771,6 +915,18 @@ function score(j) {
     }
   }
 
+  // Degree-restricted roles (PhD / Masters-only internships) for candidates without that degree.
+  const edu = `${profile.education || ''} ${profile.degree || ''}`;
+  if (/\b(ph\.?d|doctoral)\b/i.test(j.title) && !/\b(ph\.?d|doctor)/i.test(edu)) { s -= 40; reasons.push('PhD-only role'); }
+  else if (/\b(masters?|m\.?s\.?|m\.?tech|mba)\b(?:[\s-]+(?:student|intern|only|graduate))/i.test(j.title) && !/\b(master|m\.?s\b|m\.?tech|mba)/i.test(edu)) { s -= 25; reasons.push("master's-only role"); }
+
+  // Graduation batch eligibility (common in Indian fresher / campus postings).
+  const batches = batchYears(`${j.title}\n${j.description}`);
+  if (gradYear && batches.length) {
+    if (batches.includes(gradYear)) { s += 6; reasons.push(`your ${gradYear} batch is eligible`); }
+    else { s -= 45; reasons.push(`batch ${batches.join('/')} only`); }
+  }
+
   // Recency
   if (j.posted_at) {
     const days = (Date.now() - new Date(j.posted_at)) / 864e5;
@@ -778,11 +934,12 @@ function score(j) {
     else if (days > 60) s -= 10;
   }
 
-  return { score: Math.max(0, Math.min(100, Math.round(s))), matched_skills: [...matched, ...matched2], missing_skills: missing, why: reasons.join('; ') };
+  return { score: Math.max(0, Math.min(100, Math.round(s))), matched_skills: [...matched, ...matched2], missing_skills: missing, why: reasons.join('; '), ...(batches.length ? { batches } : {}) };
 }
 
 function relevant(j) {
   if (!j.title || !j.url) return false;
+  if (SCAM.test(j.description)) return false; // posts asking candidates for money
   if (excludeCompanies.has(norm(j.company))) return false;
   if (excludeKeywords.some(k => termRegex(k).test(j.title))) return false;
   if (j.posted_at && MAX_AGE_DAYS && (Date.now() - new Date(j.posted_at)) / 864e5 > MAX_AGE_DAYS) return false;
@@ -825,6 +982,13 @@ async function main() {
     const fx = JSON.parse(fs.readFileSync(args.fixtures, 'utf8'));
     all.push(...fx.map(f => job({ source: 'fixture', ...f })));
     report.fixtures = `${fx.length} jobs`;
+  }
+  // Jobs Claude found by browsing (Instagram, Wellfound, Instahyre, Naukri, careers pages) are
+  // written to inbox-jobs.json and merged into every run, scored the same way.
+  const inbox = readJSON(path.join(OUT_DIR, 'inbox-jobs.json'), []);
+  if (Array.isArray(inbox) && inbox.length) {
+    all.push(...inbox.filter(f => f && f.title && f.url).map(f => job({ source: 'inbox', ...f })));
+    report.inbox = `${inbox.length} jobs from browsing (inbox-jobs.json)`;
   }
   await Promise.all([...SOURCES].map(async name => {
     if (!sources[name]) { report[name] = 'unknown source'; return; }
@@ -880,18 +1044,29 @@ async function main() {
   // Liveness: re-check the top results from sources that don't guarantee the job is still open.
   if (!args['no-verify']) {
     const LIVE_CHECK = new Set(['hn-whoishiring', 'remotive', 'remoteok', 'jobicy', 'himalayas', 'weworkremotely', 'arbeitnow', 'careers-page']);
-    const toCheck = ranked.slice(0, 60).filter(j => LIVE_CHECK.has(j.source) || j.source.startsWith('jsearch') || j.source === 'adzuna');
+    const social = j => /^(telegram|fresher-sites|inbox|instagram)/.test(j.source);
+    const toCheck = ranked.slice(0, 80).filter(j => LIVE_CHECK.has(j.source) || social(j) || j.source.startsWith('jsearch') || j.source === 'adzuna');
     await pool(toCheck, 4, async j => {
       try {
         const r = await getText(j.url);
         if (r.status === 404 || r.status === 410 ||
-          /(no longer (accepting|available|open)|position has been filled|job (has )?expired|this job is closed|job posting (has been )?(removed|closed))/i.test(r.text.slice(0, 200000))) j.closed = true;
+          /(no longer (accepting|available|open)|position has been filled|job (has )?expired|this job is closed|job posting (has been )?(removed|closed)|job not found|requisition is no longer)/i.test(r.text.slice(0, 200000))) j.closed = true;
         else if (r.status === 200) j.verified_live = true;
+        // Shortened / tracking links (tinyurl, bit.ly, partner redirects): keep the real careers page.
+        if (r.url && r.url !== j.url && /^https?:/.test(r.url)) { j.via = j.url; j.apply_url = r.url; }
       } catch { /* unknown: keep */ }
     });
     const closed = ranked.filter(j => j.closed).length;
     ranked = ranked.filter(j => !j.closed);
     report.verify = `${toCheck.length} checked, ${closed} closed dropped (ATS and LinkedIn jobs are live by source)`;
+  }
+  // Posts from Telegram, fresher sites and Instagram often omit the company: take it from the link,
+  // and mark whether the link is an official careers page (vs an aggregator article).
+  for (const j of ranked) {
+    const link = j.apply_url || j.url;
+    if (!j.company) j.company = companyFromUrl(link);
+    const KNOWN_ATS = /(oraclecloud\.com|myworkdayjobs\.com|greenhouse\.io|lever\.co|ashbyhq\.com|smartrecruiters\.com|workable\.com|keka\.com|darwinbox\.in|zohorecruit\.|icims\.com|taleo\.net|successfactors\.|rippling\.com|recruitee\.com|teamtailor\.com|freshteam\.com|bamboohr\.com|personio\.)/i;
+    if (/^(telegram|fresher-sites|inbox|instagram)/.test(j.source)) j.official_link = KNOWN_ATS.test(hostOf(link)) || (Boolean(companyFromUrl(link)) && !AGGREGATOR_HOST.test(hostOf(link)));
   }
 
   // Stable IDs across runs, and a "new since last run" flag.

@@ -321,3 +321,37 @@ Education: B.Tech 2024`);
   assert.equal(out.checks.contact.github_or_portfolio, false);
   assert.equal(out.checks.sections.projects, false);
 });
+
+// ---------------------------------------------------------------- social / fresher posts
+test('search: batch eligibility, scam filter, inbox merge and company-from-link', () => {
+  const dir = tmp();
+  write(path.join(dir, 'profile.json'), { ...profile, graduation: 'May 2027' });
+  write(path.join(dir, 'fx.json'), [
+    { title: 'Software Engineer', company: 'BatchOk', location: 'Pune', url: 'https://x.test/b1', posted_at: daysAgo(1), description: 'Eligible batch: 2026 / 2027. Python FastAPI.', source: 'telegram:demo' },
+    { title: 'Software Engineer', company: 'BatchNo', location: 'Pune', url: 'https://x.test/b2', posted_at: daysAgo(1), description: 'Only 2024-2025 passouts can apply. Python FastAPI.', source: 'telegram:demo' },
+    { title: 'Software Engineer', company: 'Grad2028', location: 'Pune', url: 'https://x.test/b3', posted_at: daysAgo(1), description: 'You must be graduating in 2028. Python FastAPI.' },
+    { title: 'Software Engineer', company: 'Scammy', location: 'Pune', url: 'https://x.test/s', posted_at: daysAgo(1), description: 'Python FastAPI. Pay a refundable fee of 2000 to confirm your slot.' },
+    { title: 'Backend Engineer', company: '', location: 'Bengaluru', url: 'https://jobs.lever.co/acme-labs/123', posted_at: daysAgo(1), description: 'Python FastAPI PostgreSQL', source: 'telegram:demo' },
+  ]);
+  write(path.join(dir, 'inbox-jobs.json'), [
+    { title: 'Software Engineer Intern', company: 'Insta Co', location: 'Kochi', url: 'https://insta.test/careers/1', via: 'https://www.instagram.com/p/abc/', source: 'instagram:jobspage', posted_at: daysAgo(2), description: 'Python intern, 2027 batch' },
+  ]);
+  const r = run(S('job-search/scripts/search_jobs.mjs'), ['--profile', path.join(dir, 'profile.json'), '--fixtures', path.join(dir, 'fx.json'), '--min-score', '0', '--no-verify']);
+  assert.equal(r.status, 0, r.stderr);
+  const jobs = JSON.parse(fs.readFileSync(path.join(dir, 'jobs.json'), 'utf8')).jobs;
+  const by = c => jobs.find(j => j.company === c);
+  assert.deepEqual(by('BatchOk').batches, [2026, 2027]);
+  assert.match(by('BatchOk').why, /2027 batch is eligible/);
+  assert.deepEqual(by('BatchNo').batches, [2024, 2025]);
+  assert.ok(by('BatchNo').why.includes('batch 2024/2025 only'), by('BatchNo').why);
+  assert.ok(by('BatchOk').score - by('BatchNo').score >= 30, 'wrong batch pushed down hard (scores are capped at 100)');
+  assert.match(by('Grad2028').why, /batch 2028 only/);
+  assert.equal(by('Scammy'), undefined, 'fee-asking post dropped');
+  const lever = jobs.find(j => j.url.includes('acme-labs'));
+  assert.equal(lever.company, 'Acme Labs', 'company inferred from the apply link');
+  assert.equal(lever.official_link, true);
+  const insta = by('Insta Co');
+  assert.ok(insta, 'inbox job merged');
+  assert.equal(insta.source, 'instagram:jobspage');
+  assert.match(JSON.parse(fs.readFileSync(path.join(dir, 'jobs.json'), 'utf8')).sources.inbox, /1 jobs from browsing/);
+});

@@ -5,7 +5,7 @@ at each one.**
 
 A Claude Code plugin that turns your resume into a complete job hunt:
 
-1. **Finds relevant jobs everywhere.** LinkedIn's public listings, 137 company career boards
+1. **Finds relevant jobs everywhere.** LinkedIn's public listings (city by city across India or anywhere), 144 company career boards
    (including Amazon, Microsoft, Qualcomm and JPMorgan), any company's careers page, and 12 job
    boards. About 15,000 postings scanned per run, with no API keys.
 2. **Ranks them by your chance of an interview call**, not just keyword match: fit with your
@@ -82,7 +82,7 @@ or inside a Claude Code session:
 /plugin install job-hunter@job-hunter-marketplace
 ```
 
-To pin a reviewed version instead of the latest `main`, use `Sthitadhi1/job-hunter#v3.1.0`.
+To pin a reviewed version instead of the latest `main`, use `Sthitadhi1/job-hunter#v3.2.0`.
 
 Restart Claude Code, then run `/job-hunter:hunt` with your resume (PDF, DOCX, TXT or Markdown),
 or just say "review my resume for AIML jobs". If you don't give a path, it looks for a resume in
@@ -129,7 +129,7 @@ Or just talk: "find jobs for my resume", "should I apply to J012?", "find recrui
 | Skill | Does |
 |---|---|
 | `resume-profile` | Reads PDF/DOCX/TXT (finds it in Downloads/Desktop if no path), builds `profile.json` + `resume.txt` |
-| `job-search` | LinkedIn public jobs + 137 verified company boards (incl. Amazon, Microsoft, Qualcomm, JPMorgan APIs) + any careers page + 10 job boards + web search; liveness check; stable IDs; new-since-last-run |
+| `job-search` | LinkedIn public jobs + 144 verified company boards (incl. Amazon, Microsoft, Qualcomm, JPMorgan APIs) + any careers page + 10 job boards + web search; liveness check; stable IDs; new-since-last-run |
 | `resume-review` | Keyword gaps vs your matched jobs (demand %), ATS and bullet checks, prioritized fixes, before/after rewrites, gap-closing plan |
 | `job-evaluate` | Requirement-by-requirement fit, eligibility blockers, comp, scam/legitimacy check, 1–5 verdict, then ranks by **interview chance** (fit, applicant count, freshness, reachability) |
 | `linkedin-leads` | **Mandatory** contact per job via a 9-rung ladder (job poster → hiring manager → team member → recruiter → … → agency recruiter) in your logged-in browser, enforced by `check_leads.mjs`; email pattern + MX + careers inbox |
@@ -140,6 +140,7 @@ Or just talk: "find jobs for my resume", "should I apply to J012?", "find recrui
 | `reply-triage` | Classifies employer replies (pasted or from your inbox) into tracker updates, pulls deadlines, drafts responses, flags scams |
 | `interview-prep` | Company/process research, likely questions, resume deep-dives, reusable STAR story bank, live mock interviews with scoring, debriefs |
 | `offer-compare` | Year-1 and multi-year comparison incl. RSU/ESOP scenarios, cliffs, Indian CTC breakdown; negotiation plan and counter-offer draft |
+| `social-jobs` | Openings posted on Instagram job pages, Telegram, Wellfound, Instahyre, Cutshort, Naukri and startup directories: read in your browser, verified on the official careers page, scams and wrong batches dropped, merged into the ranked list |
 
 ## Output (`./job-hunt/`)
 
@@ -184,8 +185,10 @@ based on career-ops' README (not a head-to-head benchmark):
 | Setup | `npx … init`, `npm install`, `npx playwright install chromium`, YAML profile + portals, write `cv.md` | Install the plugin. Give it your resume file. |
 | Profile | `intake` builds it from files you put in `documents/` (confirms before writing); you also keep a `cv.md` | Parsed from your existing PDF/DOCX, found automatically in Downloads/Desktop |
 | LinkedIn jobs | Paste alert emails / `linkedin-import.mjs` | Searched directly (public listings, full descriptions) |
-| Preconfigured companies | 100+ | **137 verified live**, incl. Amazon, Microsoft, Qualcomm, JPMorgan search APIs |
-| Source/provider modules | **55+** (ATS APIs, board feeds, RSS, local parsers) | ~30: 13 ATS types, 3 big-employer APIs, 12 job boards/feeds, careers-page JSON-LD crawler |
+| Preconfigured companies | 100+ | **144 verified live**, incl. Amazon, Microsoft, Qualcomm, JPMorgan search APIs |
+| Source/provider modules | **55+** (ATS APIs, board feeds, RSS, local parsers) | ~45: 13 ATS types, 3 big-employer APIs, 12 job boards/feeds, 11 Telegram job channels, 4 fresher-job sites, careers-page JSON-LD crawler |
+| Social-media / fresher jobs | Not covered | Telegram channels + fresher sites automatically; Instagram, Wellfound, Instahyre, Naukri via your browser (`social-jobs`), each verified on the official careers page, with scam and batch filters |
+| Indian cities | Via search queries | LinkedIn searched city by city (`--cities india`: 14 hubs) with an entry-level filter |
 | Finding a company's board | `discover` maps names to ATS boards | `--detect` (ATS probe + careers-page crawl, flags Workday/iCIMS/Taleo sites for the browser), remembered for next time |
 | Finding people | `contacto` finds hiring manager / recruiter / peer and drafts a ≤300-char LinkedIn note | Same roles, plus "Meet the hiring team" and the company People tab in your signed-in browser |
 | Emails | No email-address finding mentioned in its README | Pattern + MX check + company's published careers inbox, confidence-labelled |
@@ -210,7 +213,12 @@ form filling) are only now being run end to end.
 
 ## Where jobs come from
 
-No keys needed: LinkedIn public job search · ATS boards: Greenhouse, Lever, Ashby,
+No keys needed: LinkedIn public job search, city by city (`--cities india` covers Bengaluru,
+Hyderabad, Pune, Chennai, Mumbai, Delhi, Gurugram, Noida, Kochi, Ahmedabad, Jaipur, Kolkata,
+Coimbatore, Thiruvananthapuram) · 11 Telegram job channels and 4 fresher-job sites, where most
+Instagram job pages cross-post off-campus drives (edit `skills/job-search/data/telegram.json` /
+`feeds.json`, or add your own in `profile.json`) · Instagram job pages, Wellfound, Instahyre,
+Cutshort and Naukri through your browser with the `social-jobs` skill · ATS boards: Greenhouse, Lever, Ashby,
 SmartRecruiters, Workable, Recruitee, Rippling, Gem, Teamtailor, Personio, BambooHR, Breezy,
 Pinpoint · big-employer APIs: Amazon, Eightfold (Microsoft, Qualcomm), Oracle HCM (JPMorgan) ·
 company careers pages (embedded boards + schema.org JobPosting) · Himalayas · Jobicy ·

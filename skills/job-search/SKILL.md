@@ -1,6 +1,6 @@
 ---
 name: job-search
-description: Search the internet for open jobs that match the user's resume profile across LinkedIn's public job search, 137 verified company career boards (Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Recruitee, Rippling, Gem, Teamtailor, Personio, BambooHR, Breezy, Pinpoint), big-employer career APIs (Amazon, Microsoft, Qualcomm, JPMorgan), any company's own careers page, Himalayas, Jobicy, WeWorkRemotely, Working Nomads, NoDesk, Remotive, RemoteOK, Arbeitnow, Hacker News Who's Hiring, YC startup job posts and targeted web searches; checks postings are still open, scores, dedupes, flags what's new since the last run and ranks everything into job-hunt/jobs.md. No API keys needed. Use this whenever the user wants to find jobs, openings, roles or positions that fit their resume or skills, asks "who is hiring for X", wants jobs at specific companies, or wants to refresh or check for new job matches.
+description: Search the internet for open jobs that match the user's resume profile across LinkedIn's public job search, 144 verified company career boards including Indian startups (Greenhouse, Lever, Ashby, SmartRecruiters, Workable, Recruitee, Rippling, Gem, Teamtailor, Personio, BambooHR, Breezy, Pinpoint), big-employer career APIs (Amazon, Microsoft, Qualcomm, JPMorgan), any company's own careers page, Himalayas, Jobicy, WeWorkRemotely, Working Nomads, NoDesk, Remotive, RemoteOK, Arbeitnow, Telegram job channels and fresher-job sites (where Instagram job pages cross-post), LinkedIn searched across Indian cities (Bengaluru, Pune, Hyderabad, Chennai, Mumbai, Delhi NCR, Kochi…), Hacker News Who's Hiring, YC startup job posts and targeted web searches; checks postings are still open, scores, dedupes, flags what's new since the last run and ranks everything into job-hunt/jobs.md. No API keys needed. Use this whenever the user wants to find jobs, openings, roles or positions that fit their resume or skills, asks "who is hiring for X", wants jobs at specific companies, or wants to refresh or check for new job matches.
 ---
 
 # Job search
@@ -18,9 +18,18 @@ From the user's working directory (where `job-hunt/` lives):
 node "<this skill's base directory>/scripts/search_jobs.mjs" --profile job-hunt/profile.json
 ```
 
-It takes 1–2 minutes and prints a JSON summary per source. What it does by itself:
-- Searches LinkedIn's public job listings for each target title × location (with full
-  descriptions), all 137 bundled company boards (including Amazon, Microsoft, Qualcomm and JPMorgan search APIs), and the remote/HN/YC boards.
+It takes 1–4 minutes (longer with many cities) and prints a JSON summary per source. What it does by itself:
+- Searches LinkedIn's public job listings for each target title × city, filtered to the user's
+  experience level (internship/entry for freshers), with full descriptions.
+- Reads all 144 bundled company boards (incl. Amazon, Microsoft, Qualcomm, JPMorgan APIs and Indian
+  startups like Swiggy, Freshworks, Razorpay, InMobi, Zeta, Tekion, Sarvam, Hevo, Zenoti, Shipsy).
+- Reads **11 Telegram job channels** (where most Instagram job pages cross-post off-campus drives and
+  fresher roles) and **4 fresher-job sites**, follows shortened/affiliate links to the real careers
+  page, and fills in missing company names from the link.
+- Checks **graduation-batch eligibility** ("2025/2026 batch only", "graduating in 2028") against
+  `profile.graduation` and pushes ineligible postings down; drops posts that ask for any fee.
+- Merges `job-hunt/inbox-jobs.json`: jobs Claude collected by browsing (Instagram, Wellfound,
+  Instahyre, Naukri… via the **social-jobs** skill).
 - Drops postings that say they're closed, and re-checks the top results from feeds that can go stale.
 - Keeps **stable job IDs** across runs (`J003` stays `J003`) and marks jobs first seen this run as
   `new` (🆕 in jobs.md). `jobs-archive.json` keeps every job ever matched.
@@ -33,8 +42,12 @@ Flags:
 | `--crawl "url,url"` | | Crawl careers page URLs for embedded boards / JobPosting data |
 | `--min-score N` | 35 | Raise to 50 for a tighter list, lower to 25 when results are thin |
 | `--days N` | 45 | Max posting age (also sets LinkedIn's date filter) |
-| `--sources a,b` | all | Subset of `linkedin,ats,himalayas,jobicy,wwr,workingnomads,nodesk,remotive,remoteok,arbeitnow,hn,ycjobs,jsearch,adzuna` |
-| `--linkedin-pages N` | 3 | LinkedIn result pages per query × location (10–25 jobs each) |
+| `--cities X` | profile locations | `india` (14 hubs: Bengaluru, Hyderabad, Pune, Chennai, Mumbai, Delhi, Gurugram, Noida, Kochi, Ahmedabad, Jaipur, Kolkata, Coimbatore, Thiruvananthapuram), `india-metros`, or a list like `"Pune,Kochi"` |
+| `--max-cities N` | 14 | Cap on cities searched on LinkedIn |
+| `--no-level-filter` | | Don't filter LinkedIn by experience level |
+| `--telegram "a,b"` | | Extra Telegram channels (also `profile.telegram_channels`); feeds via `profile.job_feeds` |
+| `--sources a,b` | all | Subset of `linkedin,ats,telegram,fresher-sites,himalayas,jobicy,wwr,workingnomads,nodesk,remotive,remoteok,arbeitnow,hn,ycjobs,jsearch,adzuna` |
+| `--linkedin-pages N` | 3 | LinkedIn result pages per query × city (10–25 jobs each; 2 when searching 6+ cities) |
 | `--no-verify` | | Skip the liveness re-check |
 | `--verbose` | | Show which company boards failed |
 
@@ -53,6 +66,9 @@ Jobs: Indeed, Glassdoor, Naukri…) and `ADZUNA_APP_ID`+`ADZUNA_APP_KEY`. Mentio
 most.
 
 ## 2. Widen with web search and the browser
+
+When the user asks for startups in specific cities, Instagram/Telegram job pages, or off-campus
+drives, run with `--cities india` (or their cities) and then the **social-jobs** skill.
 
 Sources with no public feed (Naukri, Instahyre, Wellfound, Cutshort, Workday sites, Indeed) are
 reached by web search, or by the user's browser when it's connected. Run the 4–8 most relevant

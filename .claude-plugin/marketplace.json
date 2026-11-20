@@ -11,7 +11,7 @@
       "name": "job-hunter",
       "source": "./",
       "description": "Upload your resume: jobs ranked by interview chance, a LinkedIn contact for every job, resume gaps and fixes, tailored CVs and outreach.",
-      "version": "3.1.0"
+      "version": "3.2.0"
     }
   ]
 }

@@ -16,8 +16,11 @@ the same name; follow that skill's instructions.
 1. **resume-profile**: use the resume path in the arguments, an attached resume, or find one
    (job-hunt/, current folder, Downloads, Desktop). Reuse `job-hunt/profile.json` if it exists and
    no new resume was given. Fold the preferences from the arguments into the profile.
-2. **job-search**: run the aggregator (pass any company names from the arguments via `--detect`),
-   widen with web search for the user's region, sanity-check the top results.
+2. **job-search**: run the aggregator (pass any company names from the arguments via `--detect`;
+   pass `--cities india` or the cities they named when they want startups across Indian cities),
+   widen with web search for the user's region, sanity-check the top results. If the user follows
+   Instagram job pages (`profile.instagram_pages`) or asked for social-media jobs, run **social-jobs**
+   and re-run the search so verified posts are ranked too.
 3. **resume-review**: run the gap analysis against the matched jobs and write
    `resume-review.md` (gaps vs market demand, fixes, before/after rewrites).
 4. **job-evaluate**: evaluate the top 10 not yet evaluated (with `Blocker:` lines), then
