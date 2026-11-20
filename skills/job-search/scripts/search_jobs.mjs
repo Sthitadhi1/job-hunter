@@ -180,14 +180,27 @@ function parseJobPost(text, links) {
     return { title: title.replace(/^(for|as)\s+/i, ''), company: company.replace(/^(?:\W+)/, ''), location, url };
   };
   if (!links.length) return [fromBlock(text, '')];
-  // Split the text into blocks that each end at an apply link mention.
-  const blocks = text.split(/\n(?=\s*(?:company|role|position|[A-Z][\w&.\- ]{1,40}\s+(?:is\s+)?hiring))/i);
+  // A new opening starts at a "Company:" line (often numbered: "1️⃣ Company: …") or "X is hiring".
+  const blocks = text.split(/\n(?=\s*(?:\d+\s*️?⃣|\d+[.)]|[•●▪➡👉🔹🔸-])?\s*(?:company(?:\s*name)?\s*[:\-–]|[A-Z][\w&.\- ]{1,40}\s+(?:is\s+)?hiring\b))/iu)
+    .filter(b => b.trim());
+  const key = u => u.replace(/^https?:\/\//, '').slice(0, 35);
   const posts = [];
-  links.forEach((url, i) => {
-    const block = blocks.length === links.length ? blocks[i] : text;
-    const p = fromBlock(block, url);
-    if (p.title) posts.push(p);
-  });
+  if (blocks.length > 1) {
+    // Pair each block with the apply link printed inside it.
+    for (const b of blocks) {
+      const url = links.find(u => b.includes(key(u)));
+      if (!url) continue;
+      const p = fromBlock(b, url);
+      if (p.title) posts.push(p);
+    }
+  }
+  if (!posts.length) {
+    links.forEach((url, i) => {
+      const block = blocks.length === links.length ? blocks[i] : text;
+      const p = fromBlock(block, url);
+      if (p.title) posts.push(p);
+    });
+  }
   return posts.length ? posts : [fromBlock(text, links[0])];
 }
 
@@ -208,6 +221,7 @@ function companyFromUrl(u) {
   const parts = h.split('.');
   return pick(parts.length > 2 && /^(careers?|jobs?|apply|hiring|join)$/.test(parts[0]) ? parts[1] : parts[parts.length - 2]);
 }
+const IN_PLACES = /\b(india|bengaluru|bangalore|hyderabad|pune|chennai|mumbai|delhi|gurugram|gurgaon|noida|kochi|cochin|kerala|ahmedabad|jaipur|kolkata|coimbatore|thiruvananthapuram|trivandrum|indore|chandigarh|mohali|bhubaneswar|nagpur|vadodara|mysuru|mysore|karnataka|telangana|maharashtra|tamil nadu|haryana|uttar pradesh|gujarat|rajasthan|west bengal|ind)\b/i;
 const SCAM = /(registration fee|security deposit|processing fee|training fee|pay (?:rs\.?|₹|inr)\s?\d|refundable (?:fee|deposit)|joining fee)/i;
 
 // Graduation-year eligibility ("2025/2026 batch", "graduating in 2028", "2024-2026 passouts").
@@ -891,7 +905,13 @@ function score(j) {
   const openRemote = j.remote && (!regionLeft || /anywhere|global|worldwide/.test(locN));
   if (locHit) { s += 10; reasons.push('preferred location'); }
   else if (openRemote && remoteOk) { s += 8; reasons.push('remote (open)'); }
-  else if (locations.length && j.location) { s -= profile.open_to_relocate ? 8 : 25; reasons.push(`location: ${j.location.slice(0, 40)}`); }
+  else if (locations.length && j.location) {
+    // Same country, other city: relocation. Another country: needs a visa unless the profile opts in.
+    const home = (COUNTRIES[String(profile.country_code || '').toLowerCase()] || [])[0];
+    const domestic = (home && locN.includes(norm(home))) || (String(profile.country_code).toLowerCase() === 'in' && IN_PLACES.test(j.location));
+    if (domestic) { s -= profile.open_to_relocate ? 3 : 15; reasons.push(`relocate: ${j.location.slice(0, 30)}`); }
+    else { s -= profile.open_to_relocate_abroad ? 10 : 35; reasons.push(`abroad: ${j.location.slice(0, 30)}`); }
+  }
 
   // Seniority mismatch
   const senior = /\b(senior|sr\.?|staff|principal|lead|head|director|vp)\b/i.test(j.title);
@@ -903,11 +923,13 @@ function score(j) {
   if (junior && !['intern', 'junior', 'entry', 'fresher', 'graduate'].includes(seniority) && /intern/i.test(j.title)) s -= 30;
   const earlyCareer = ['intern', 'junior', 'entry', 'fresher', 'graduate'].includes(seniority);
   if (earlyCareer && (junior || /\b(new grad|associate|engineer i|sde[- ]?(i|1)|apprentice|campus|university|early career)\b/i.test(j.title))) { s += 8; reasons.push('entry-level title'); }
+  // Numbered / mid levels ("Software Engineer II", "SDE 2", "Development Engineer 3", "Intermediate").
+  if (earlyCareer && /\b(?:engineer|developer|sde|swe|analyst)\s*[-–]?\s*(?:ii|iii|iv|[2-5](?:\s*\/\s*[2-5])?)\b|\b(?:intermediate|mid[- ]?level)\b/i.test(j.title)) { s -= 22; reasons.push('mid-level title'); }
 
   // Years of experience asked for vs the candidate's ("3+ years", "2-4 yrs of experience", "minimum 5 years").
   if (profile.years_experience !== undefined) {
     const yrs = Number(profile.years_experience) || 0;
-    const asks = [...String(j.description).matchAll(/(?:minimum|min\.?|at least|over)?\s*(\d{1,2})\s*\+?\s*(?:-|–|to)?\s*(?:\d{1,2})?\s*\+?\s*(?:years|yrs)(?:'|’)?\s*(?:of)?\s*(?:[\w-]+\s){0,3}?(?:experience|exp\b)/gi)]
+    const asks = [...String(j.description).matchAll(/(?:minimum|min\.?|at least|over)?\s*(\d{1,2})\s*\+?\s*(?:-|–|to)?\s*(?:\d{1,2})?\s*\+?\s*(?:years|yrs)(?:'|’)?\s*(?:of)?\s*(?:[\w/,.-]+\s){0,9}?(?:experience|exp\b)/gi)]
       .map(m => Number(m[1])).filter(n => n > 0 && n <= 15);
     if (asks.length) {
       const req = Math.min(...asks);

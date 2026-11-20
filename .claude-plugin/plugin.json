@@ -1,6 +1,6 @@
 {
   "name": "job-hunter",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "Upload your resume: finds relevant jobs across LinkedIn, 137 company boards and job sites, ranks them by your chance of an interview call, finds a LinkedIn contact for every job you apply to, reviews your resume for gaps and fixes, then tailors CVs, drafts outreach and fills applications.",
   "author": {
     "name": "Sthitadhi Maity"

@@ -355,3 +355,24 @@ test('search: batch eligibility, scam filter, inbox merge and company-from-link'
   assert.equal(insta.source, 'instagram:jobspage');
   assert.match(JSON.parse(fs.readFileSync(path.join(dir, 'jobs.json'), 'utf8')).sources.inbox, /1 jobs from browsing/);
 });
+
+test('search: abroad roles, mid-level titles and long years-of-experience phrasing are scored down', () => {
+  const dir = tmp();
+  write(path.join(dir, 'profile.json'), { ...profile, country_code: 'in', open_to_relocate: true });
+  write(path.join(dir, 'fx.json'), [
+    { title: 'Software Engineer Intern', company: 'HomeCity', location: 'Chennai, India', url: 'https://x.test/h', posted_at: daysAgo(1), description: 'Python FastAPI' },
+    { title: 'Software Engineer Intern', company: 'OtherIndianCity', location: 'Kochi, Kerala', url: 'https://x.test/k', posted_at: daysAgo(1), description: 'Python FastAPI' },
+    { title: 'Software Engineer Intern', company: 'Abroad', location: 'US-CA-Menlo Park', url: 'https://x.test/a', posted_at: daysAgo(1), description: 'Python FastAPI' },
+    { title: 'Software Engineer III', company: 'MidLevel', location: 'Chennai, India', url: 'https://x.test/m', posted_at: daysAgo(1), description: 'Python FastAPI' },
+    { title: 'Software Development Engineer', company: 'LongYears', location: 'Chennai, India', url: 'https://x.test/y', posted_at: daysAgo(1), description: 'Python FastAPI. 3+ years of big data technologies such as Spark or Hive experience.' },
+  ]);
+  const r = run(S('job-search/scripts/search_jobs.mjs'), ['--profile', path.join(dir, 'profile.json'), '--fixtures', path.join(dir, 'fx.json'), '--min-score', '0', '--no-verify']);
+  assert.equal(r.status, 0, r.stderr);
+  const jobs = JSON.parse(fs.readFileSync(path.join(dir, 'jobs.json'), 'utf8')).jobs;
+  const by = c => jobs.find(j => j.company === c);
+  assert.ok(by('OtherIndianCity').score > by('Abroad').score + 25, 'relocating within India beats a role abroad');
+  assert.match(by('OtherIndianCity').why, /relocate:/);
+  assert.match(by('Abroad').why, /abroad:/);
+  assert.match(by('MidLevel').why, /mid-level title/);
+  assert.match(by('LongYears').why, /asks 3\+ yrs/);
+});

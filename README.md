@@ -82,7 +82,7 @@ or inside a Claude Code session:
 /plugin install job-hunter@job-hunter-marketplace
 ```
 
-To pin a reviewed version instead of the latest `main`, use `Sthitadhi1/job-hunter#v3.2.0`.
+To pin a reviewed version instead of the latest `main`, use `Sthitadhi1/job-hunter#v3.2.1`.
 
 Restart Claude Code, then run `/job-hunter:hunt` with your resume (PDF, DOCX, TXT or Markdown),
 or just say "review my resume for AIML jobs". If you don't give a path, it looks for a resume in

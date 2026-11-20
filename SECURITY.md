@@ -83,4 +83,4 @@ remove it all.
 
 If you find a security or privacy issue, please open a GitHub issue (for anything sensitive, ask
 for a private contact in the issue rather than posting details). Each release is tagged; pin a
-tag (`Sthitadhi1/job-hunter#v3.2.0`) if you want to install exactly the version you reviewed.
+tag (`Sthitadhi1/job-hunter#v3.2.1`) if you want to install exactly the version you reviewed.
