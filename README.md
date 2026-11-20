@@ -32,6 +32,33 @@ resume ─► profile ─► ~15k jobs scanned ─► resume gaps ─► fit + i
  dashboard ◄─ applications filled ◄─ outreach drafts ◄─ tailored CVs ◄─ LinkedIn lead for EVERY job
 ```
 
+> **Never used a terminal?** Follow the step-by-step guide:
+> **[sthitadhi1.github.io/job-hunter](https://sthitadhi1.github.io/job-hunter/)**. It takes about 10
+> minutes and is copy-paste only. After installing, type `/job-hunter:setup` and it checks
+> everything for you (and offers to install Node.js if it's missing).
+
+### What it looks like
+
+*Illustrative output (companies, people and numbers are made up):*
+
+```
+Best fit to apply to first: J014 · Backend Engineer Intern · Acme Payments, Bangalore
+  Interview chance: High (81) · verdict 4.6/5 · posted 2 days ago · 38 applicants
+  Why: meets every hard rule (2027 grad, CGPA cut-off, on-site Jan–May); Python/SQL/Docker match
+  Message first: the campus recruiter who posted it, plus an alum from your college on the team
+
+Best bets
+  1. J014 Acme Payments   Backend Intern         High (81)    2 LinkedIn contacts
+  2. J031 Northwind AI    Software Engineer      High (74)    3 LinkedIn contacts
+  3. J007 Globex Logistics Assoc. SWE Intern     Medium (66)  3 LinkedIn contacts
+  ✗ J002 Initech          SWE Intern             blocked: requires 2028 graduates
+
+Resume: 7/10 for backend SWE roles
+  Missing keywords: JavaScript (in 60% of your jobs; you list TypeScript but never say it),
+  Distributed Systems (28%), Kubernetes (15%)
+  Fix first: name JavaScript in Skills · quantify 3 project bullets · add a GitHub link
+```
+
 ## Install
 
 You need [Claude Code](https://claude.com/claude-code) (CLI or desktop app) and Node.js 18+.
@@ -89,6 +116,7 @@ once) or falls back to web search.
 
 | Command | What it does |
 |---|---|
+| `/job-hunter:setup` | Checks Node.js, browser and LinkedIn access; walks beginners through fixes |
 | `/job-hunter:hunt [resume] [prefs] [--top N] [--submit]` | Everything, start to finish |
 | `/job-hunter:scan [--evaluate] [companies]` | Daily: only jobs new since last run, plus follow-ups due |
 | `/job-hunter:followups` | Draft today's follow-ups |

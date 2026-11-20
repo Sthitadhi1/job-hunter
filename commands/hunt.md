@@ -9,6 +9,10 @@ confirmations. Arguments: $ARGUMENTS
 Work in `./job-hunt/`. Track the steps with your task list. Each step uses the plugin skill of
 the same name; follow that skill's instructions.
 
+0. **Preflight**: run `node --version`. If Node.js 18+ is missing, follow `/job-hunter:setup`
+   (offer to install it) before continuing. The user may be new to all of this, so keep
+   explanations plain and short.
+
 1. **resume-profile**: use the resume path in the arguments, an attached resume, or find one
    (job-hunt/, current folder, Downloads, Desktop). Reuse `job-hunt/profile.json` if it exists and
    no new resume was given. Fold the preferences from the arguments into the profile.

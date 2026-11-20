@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>job-hunter · get more interview calls</title>
+<meta name="description" content="Upload your resume. job-hunter finds jobs that fit, ranks them by your chance of an interview call, finds a person on LinkedIn for each one, and tells you what to fix in your resume. Free, open source, runs in Claude Code.">
+<style>
+:root{--bg:#fbfaf7;--fg:#1d1c1a;--mut:#5f5d57;--line:#e3e1da;--card:#ffffff;--acc:#2b59c3;--acc-fg:#fff;--code:#f2f0ea;--ok:#1f7a4d;--warn:#9a5b00}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--mut:#a3a19a;--line:#2c2b28;--card:#1c1b19;--acc:#86a6ff;--acc-fg:#0e1a3a;--code:#24231f;--ok:#62c494;--warn:#e3a94d}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--mut:#a3a19a;--line:#2c2b28;--card:#1c1b19;--acc:#86a6ff;--acc-fg:#0e1a3a;--code:#24231f;--ok:#62c494;--warn:#e3a94d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 80px}
+h1{font-size:clamp(28px,6vw,40px);line-height:1.15;margin:0 0 12px;letter-spacing:-.01em}
+h2{font-size:23px;margin:48px 0 12px}
+h3{font-size:18px;margin:24px 0 6px}
+p{margin:0 0 14px}
+.lead{font-size:19px;color:var(--mut)}
+a{color:var(--acc)}
+.cta{display:inline-block;background:var(--acc);color:var(--acc-fg);padding:10px 18px;border-radius:10px;text-decoration:none;font-weight:600;margin:6px 8px 6px 0}
+.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:12px;margin:20px 0}
+h1,p,li,td{overflow-wrap:anywhere}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card b{display:block;margin-bottom:4px}
+.card span{color:var(--mut);font-size:15px}
+ol.steps{list-style:none;padding:0;margin:0;counter-reset:s}
+ol.steps>li{counter-increment:s;position:relative;padding:0 0 22px 48px;border-left:2px solid var(--line);margin-left:16px}
+ol.steps>li:last-child{border-left-color:transparent}
+ol.steps>li::before{content:counter(s);position:absolute;left:-17px;top:-2px;width:32px;height:32px;border-radius:50%;background:var(--acc);color:var(--acc-fg);display:grid;place-items:center;font-weight:700;font-size:15px}
+.tabs{display:flex;gap:6px;margin:8px 0}
+.tabs button{border:1px solid var(--line);background:var(--card);color:var(--fg);padding:5px 12px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--acc);color:var(--acc-fg);border-color:var(--acc)}
+.code{position:relative;background:var(--code);border:1px solid var(--line);border-radius:10px;padding:12px 84px 12px 14px;font:14px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-x:auto;white-space:pre;margin:8px 0}
+.code button{position:absolute;top:8px;right:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:3px 10px;font-size:13px;cursor:pointer}
+.note{border-left:3px solid var(--warn);padding:6px 12px;color:var(--mut);background:var(--card);border-radius:0 8px 8px 0;margin:12px 0}
+.yes{color:var(--ok);font-weight:600}
+.no{color:var(--warn);font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:15px;margin:10px 0}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+details{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:8px 0;background:var(--card)}
+summary{cursor:pointer;font-weight:600}
+footer{margin-top:56px;color:var(--mut);font-size:14px}
+@media (max-width:520px){ol.steps>li{padding-left:36px}.code{padding-right:14px;padding-top:40px}}
+</style>
+</head>
+<body>
+<main>
+  <p class="lead" style="margin-bottom:6px">Free · open source · runs on your computer</p>
+  <h1>Upload your resume. Get the jobs most likely to call you back.</h1>
+  <p class="lead">job-hunter is an add-on for Claude. You give it your resume and it searches about 15,000 job postings, picks the ones you have the best chance at, finds a real person on LinkedIn at each company, and tells you exactly what to fix in your resume.</p>
+  <a class="cta" href="#install">Set it up (10 minutes)</a>
+  <a class="cta ghost" href="https://github.com/Sthitadhi1/job-hunter">View on GitHub</a>
+
+  <div class="grid" role="list">
+    <div class="card" role="listitem"><b>🔎 Finds jobs that fit</b><span>LinkedIn, 137 company career pages (Amazon, Microsoft, Swiggy, Razorpay…) and 12 job boards.</span></div>
+    <div class="card" role="listitem"><b>🎯 Ranks by interview chance</b><span>Fit, eligibility, how many already applied, how fresh the post is. Names your best bet.</span></div>
+    <div class="card" role="listitem"><b>🤝 A person for every job</b><span>The poster, hiring manager, a team member or recruiter, so your application gets seen.</span></div>
+    <div class="card" role="listitem"><b>📝 Fixes your resume</b><span>Skills your target jobs ask for that your resume is missing, plus rewrites. Never fake ones.</span></div>
+  </div>
+
+  <h2 id="install">Set it up</h2>
+  <p>You need a computer (Windows, Mac or Linux), your resume (PDF or Word), and a Claude plan that includes Claude Code. No coding needed: you'll copy and paste a few lines.</p>
+
+  <ol class="steps">
+    <li>
+      <h3>Open a terminal</h3>
+      <p><b>Windows:</b> press the Windows key, type <b>PowerShell</b>, press Enter. <b>Mac:</b> press ⌘ Space, type <b>Terminal</b>, press Enter.</p>
+    </li>
+    <li>
+      <h3>Install Claude Code</h3>
+      <p>Skip this if you already have it. Paste the line for your computer, press Enter, and follow the sign-in prompt.</p>
+      <div class="tabs" role="tablist" data-group="cc">
+        <button role="tab" aria-selected="true" data-os="win">Windows</button>
+        <button role="tab" aria-selected="false" data-os="mac">Mac / Linux</button>
+      </div>
+      <div class="code" data-group="cc" data-os="win">irm https://claude.ai/install.ps1 | iex</div>
+      <div class="code" data-group="cc" data-os="mac" hidden>curl -fsSL https://claude.ai/install.sh | bash</div>
+      <p style="font-size:15px;color:var(--mut)">This is Anthropic's official installer (<a href="https://code.claude.com/docs/en/setup">setup guide</a>). Close and reopen the terminal afterwards.</p>
+    </li>
+    <li>
+      <h3>Add job-hunter</h3>
+      <p>Paste these two lines, one at a time:</p>
+      <div class="code">claude plugin marketplace add Sthitadhi1/job-hunter#v3.1.0</div>
+      <div class="code">claude plugin install job-hunter@job-hunter-marketplace</div>
+      <div class="note">Do this yourself rather than asking Claude to install it. Claude deliberately won't install code from a link someone forwarded you. Want to check it first? Read <a href="https://github.com/Sthitadhi1/job-hunter/blob/main/SECURITY.md">what it does and doesn't do</a>.</div>
+    </li>
+    <li>
+      <h3>Make a folder and start Claude there</h3>
+      <p>Your results (jobs, contacts, CVs) are saved in this folder.</p>
+      <div class="tabs" role="tablist" data-group="dir">
+        <button role="tab" aria-selected="true" data-os="win">Windows</button>
+        <button role="tab" aria-selected="false" data-os="mac">Mac / Linux</button>
+      </div>
+      <div class="code" data-group="dir" data-os="win">mkdir $HOME\Desktop\JobHunt; cd $HOME\Desktop\JobHunt; claude</div>
+      <div class="code" data-group="dir" data-os="mac" hidden>mkdir -p ~/Desktop/JobHunt && cd ~/Desktop/JobHunt && claude</div>
+      <p style="font-size:15px;color:var(--mut)">Prefer an app? The Claude desktop app's <b>Code</b> tab works too. Open it, choose the JobHunt folder, and job-hunter is already there.</p>
+    </li>
+    <li>
+      <h3>Run the setup check</h3>
+      <p>Type this into Claude. It checks everything and offers to install the one free tool it needs (Node.js) if it's missing.</p>
+      <div class="code">/job-hunter:setup</div>
+    </li>
+    <li>
+      <h3>Give it your resume</h3>
+      <p>Drag your resume into the chat (or put it in the JobHunt folder) and type:</p>
+      <div class="code">/job-hunter:hunt remote or Bangalore, backend roles</div>
+      <p>Or just ask in plain words: <i>"review my resume for AIML jobs"</i>, <i>"find me fresher roles in Pune"</i>, <i>"who should I message at Swiggy?"</i></p>
+    </li>
+  </ol>
+
+  <h3>Optional: better LinkedIn contacts</h3>
+  <p>Install <a href="https://claude.ai/chrome">Claude in Chrome</a> and stay signed in to LinkedIn in Chrome. job-hunter then reads "Meet the hiring team" and company pages for you. Without it, it finds contacts through web search, which gives fewer of them.</p>
+
+  <h2>What you get</h2>
+  <table>
+    <tr><th>File (in JobHunt/job-hunt)</th><th>What's in it</th></tr>
+    <tr><td><b>evals/README.md</b></td><td>Your best bets, ranked by chance of an interview call, with reasons</td></tr>
+    <tr><td><b>leads.csv</b></td><td>At least one LinkedIn contact per job, likely email, and a personal hook</td></tr>
+    <tr><td><b>resume-review.md</b></td><td>Resume score, missing keywords (with % of jobs asking), fixes, rewrites</td></tr>
+    <tr><td><b>cv/*.pdf</b></td><td>A tailored CV per job, checked so it never claims anything not on your resume</td></tr>
+    <tr><td><b>outreach/*.md</b></td><td>A short email and LinkedIn note per contact, plus two follow-ups</td></tr>
+    <tr><td><b>dashboard.html</b></td><td>Everything in one page: jobs, applications, contacts, follow-ups due</td></tr>
+  </table>
+
+  <h2>What it will and won't do</h2>
+  <table>
+    <tr><td class="yes">Will</td><td>Search, rank, find contacts, write drafts, fill application forms, track follow-ups</td></tr>
+    <tr><td class="no">Won't</td><td>Send any message for you · submit an application without your OK · type your passwords · invent experience · upload your resume anywhere</td></tr>
+  </table>
+
+  <h2>Questions</h2>
+  <details><summary>Will this get me interview calls?</summary>
+    <p>It raises your odds where it counts: applying early to jobs you actually qualify for, with a resume that matches the posting, and reaching a real person instead of only the applicant pool. It can't send the messages, sit the online test or do the interview. Those are yours. People who send the drafted messages and follow up get far more out of it than people who only apply.</p></details>
+  <details><summary>Does it cost anything?</summary>
+    <p>job-hunter is free. You need a Claude plan that includes Claude Code. Finding jobs needs no paid API keys. Optional keys (JSearch, Adzuna, Hunter) add more coverage if you have them.</p></details>
+  <details><summary>Will my LinkedIn account get in trouble?</summary>
+    <p>It only reads LinkedIn, slowly, and stops at any security check. Automated browsing is still against LinkedIn's rules, so it caps itself at about 40 pages per run. Set <code>linkedin_page_budget</code> to 0 in <code>job-hunt/profile.json</code> to use web search only.</p></details>
+  <details><summary>Is my data private?</summary>
+    <p>Everything stays in the JobHunt folder on your computer. The search only sends job titles, skills and locations to job sites, never your resume. No tracking. Delete the folder to remove it all.</p></details>
+  <details><summary>Which countries and roles?</summary>
+    <p>Any. It's strongest for tech roles in India, the US and Europe, but works for any job title on your resume (data, design, product, marketing…).</p></details>
+  <details><summary>I asked Claude to install it and it refused. Why?</summary>
+    <p>On purpose: Claude won't install code from a source someone forwarded you. Follow step 3 yourself and it takes ten seconds.</p></details>
+
+  <footer>MIT licensed · <a href="https://github.com/Sthitadhi1/job-hunter">Source on GitHub</a> · <a href="https://github.com/Sthitadhi1/job-hunter/blob/main/SECURITY.md">Security &amp; privacy</a> · <a href="https://github.com/Sthitadhi1/job-hunter/issues">Report a problem</a></footer>
+</main>
+<script>
+document.querySelectorAll('.code').forEach(function (el) {
+  var b = document.createElement('button');
+  b.type = 'button'; b.textContent = 'Copy'; b.setAttribute('aria-label', 'Copy command');
+  b.addEventListener('click', function () {
+    var text = el.firstChild.textContent.trim();
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () {
+      b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500);
+    }, function () { b.textContent = 'Select it'; });
+  });
+  el.appendChild(b);
+});
+var isMac = /Mac|iPhone|iPad|Linux/.test(navigator.platform || navigator.userAgent);
+document.querySelectorAll('.tabs').forEach(function (tabs) {
+  var group = tabs.dataset.group;
+  function show(os) {
+    tabs.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.os === os)); });
+    document.querySelectorAll('.code[data-group="' + group + '"]').forEach(function (c) { c.hidden = c.dataset.os !== os; });
+  }
+  tabs.querySelectorAll('button').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.os); }); });
+  show(isMac ? 'mac' : 'win');
+});
+</script>
+</body>
+</html>
