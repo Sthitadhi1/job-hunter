@@ -34,6 +34,14 @@ Only public, unauthenticated endpoints, plus three optional keyed APIs you'd hav
   `careers.qualcomm.com`, `jpmc.fa.oraclecloud.com`.
 - **Job boards:** `himalayas.app`, `jobicy.com`, `weworkremotely.com`, `www.workingnomads.com`,
   `nodesk.co`, `remotive.com`, `remoteok.com`, `www.arbeitnow.com`, `hn.algolia.com`.
+- **Telegram public channel previews:** `t.me/s/<channel>` for the job channels in
+  `skills/job-search/data/telegram.json` (plus any you add). This is the public web view; no
+  Telegram account is used.
+- **Fresher-job sites (RSS):** `offcampusjobs4u.com`, `www.freshersnow.com`, `fresherjobinfo.in`,
+  `www.enggwave.com` (`skills/job-search/data/feeds.json`, plus any you add).
+- **Apply links found in those posts:** the top results' links are opened once to follow
+  shorteners (tinyurl, bit.ly, partner redirects) to the real careers page and check the job is
+  still open.
 - **Company websites:** a careers page you or the skill names (`--crawl`/`--detect`), to find
   which job board it uses; for email formats, the company's home/careers/contact pages.
 - **Optional, only if you set the key:** `jsearch.p.rapidapi.com` (`RAPIDAPI_KEY`),
@@ -52,6 +60,11 @@ The skill files instruct Claude (in your session, with your permissions) to:
   stops at any security checkpoint or CAPTCHA instead of trying to get past it. Automated
   browsing is against LinkedIn's terms, so lower the budget or set it to 0 (web search only) if
   you're cautious about your account.
+- **Read** Instagram job pages (and Wellfound, Instahyre, Cutshort, Naukri) in your browser
+  when you use the `social-jobs` skill. It's read-only (no likes, follows, comments or DMs),
+  capped (about 30 Instagram page loads per run, `instagram_page_budget`, 0 to skip), stops at
+  any checkpoint, and keeps a job only after finding it on the company's official careers page.
+  Posts asking for any fee are dropped and flagged as likely scams.
 - **Never send** emails, LinkedIn messages or connection requests. It writes drafts; you send them.
 - **Never submit** a job application unless you approve it in the conversation (or pass `--submit`).
 - **Never enter passwords**, create accounts, solve CAPTCHAs or handle verification codes. Those
